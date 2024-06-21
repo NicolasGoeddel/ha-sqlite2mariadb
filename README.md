@@ -1,6 +1,44 @@
 # ha-sqlite2mariadb
 A migration script for Homeassistant to replace SQLite with MariaDB for better performance.
 
+## Why?
+I personally started this project because my SQLite database was just too slow after all that time without purging the data. I mean, why is the default only 10 days? That makes no sense. It had growed to over 4 GiB and showing the dashboards with graphs was terribly slow.
+
+Then I search for other people trying to do the same and found some really good tutorials and step by step guides, but none of them were able to do it fully automatic. So I decided to write this Bash script.
+
+## How?
+
+Here is a step by step explanation of what the script does. Each of the steps can be skipped or executed by choosing between yes and no.
+
+### Step 1 - Stop HA
+At first the script checks if HA is currently running and asks you if it is allowed to stop HA.
+
+### Step 2 - Create database dump
+If HA was stopped the SQLite database can be dumped. Each table gets its own file containing its data. And there there is the file `schema.sql` containing all the table definitions, primary keys and indices.
+Depending on the size of your SQLite database and the machine you are running on this can take a few minutes.
+
+### Step 3 - Start HA again
+If HA was running before step 1 you can now start it again if you want to. But be reminded that all data that will be appended to the current SQLite database will get lost unless you start over again and make a new dump.
+
+### Step 4 - Convert schema
+In this step the `schmea.sql` will be converted to a proper MySQL/MariaDB schema. For that some column types will be replaced by search and replace and some specific columns will get a completely new type. The necessary information for these irregularities can be found here: https://github.com/home-assistant/core/blob/10a2fd7cb66c2d39c2652c9b85f78e89a0dfc7a9/homeassistant/components/recorder/db_schema.py#L425
+
+### Step 5a - Create schema
+In this step all the existing tables in the target database that have the same name as the tables in SQLite will be dropped and recreated, including the primary keys and indices.
+
+### Step 5b - Import data
+Now you can begin with importing the data from the dumps created in step 2. This will definitely take much longer than the dump itself. In my case it took around an hour. The biggest table was `states` with nearly 23,000,000 entries.
+
+The import should be quite optimized. It disables the foreign key checks and sets autocommit to false, doing the whole import in one single transaction. If you have good ideas to speed up that step any further, please tell me!
+
+### Step 6 - Set auto increment
+In this step a stored procedure is used to add the `AUTO_INCREMENT` modifier to all integer based primary keys. That modifier does not exist in the world of SQLite although it exists implicitely if a column has the type an `INTEGER PRIMARY KEY`. Anyway, while the columns are going to be altered the new auto increment value is also set by selecting the maximum integer in that column, adding 1 to it and set that value.
+
+This process again can take a whole while and you might not see any progress of it in the terminal. Try to be patient. In the background the table needs to be copied again to make that change and therefore it takes that extra bit of a while.
+
+### Step 7 - Review
+This is a completely optional step where you can start an interactive MySQL/MariaDB session to have a look at the tables and the data. And from now on you are also ready to change the recorder configuration of your HA setup to use the new database.
+
 ## Compatibility
 Tested with the following versions of HomeAssistant:
 - 2024.6.3
