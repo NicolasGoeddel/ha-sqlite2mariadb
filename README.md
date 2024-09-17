@@ -151,3 +151,13 @@ statistics_short_term
 Add AUTO_INCREMENT and set AUTO_INCREMENT to 4799290
 Login to MySQL? [y/N]
 ```
+
+## Standalone scripts
+
+The script `sqlite2mariadb.sh` can be used to convert a SQLite database schema to a MariaDB/MySQL compatiable schema. The first and only parameter must be the schema file, then the converted schema will be writte on standard out.
+
+Make sure to only feed a proper schema to the converter script. This can be done like this:
+```bash
+sqlite3 -readonly sqlite.db > ".schema --indent" > sqlite_db_schema.sql
+sqlite2mariadb.sh sqlite_db_schema.sql > mariadb_db_schema.sql
+```
