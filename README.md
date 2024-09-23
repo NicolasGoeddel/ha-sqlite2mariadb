@@ -158,6 +158,6 @@ The script `sqlite2mariadb.sh` can be used to convert a SQLite database schema t
 
 Make sure to only feed a proper schema to the converter script. This can be done like this:
 ```bash
-sqlite3 -readonly sqlite.db > ".schema --indent" > sqlite_db_schema.sql
+sqlite3 -readonly sqlite.db ".schema --indent" > sqlite_db_schema.sql
 sqlite2mariadb.sh sqlite_db_schema.sql > mariadb_db_schema.sql
 ```
