@@ -14,6 +14,8 @@ db_fresh_schema=false
 case "${HA_INSTALLATION_METHOD}" in
 	docker-compose)
 		;;
+	haos)
+		;;
 	*)
 		echo "Unfortunately the installation method ${HA_INSTALLATION_METHOD} is not yet supported by this migration script." >&2
 		exit 1
@@ -32,6 +34,12 @@ function ha::config_check() {
 				echo "Service name empty: HA_DOCKER_COMPOSE_SERVICE"
 				error=true
 			fi
+			if ! [[ -r "${HA_SQLITE_DB_PATH}" ]]; then
+				echo "SQLite database seems not to be readable: HA_SQLITE_DB_PATH='${HA_SQLITE_DB_PATH}'"
+				error=true
+			fi
+			;;
+		haos)
 			if ! [[ -r "${HA_SQLITE_DB_PATH}" ]]; then
 				echo "SQLite database seems not to be readable: HA_SQLITE_DB_PATH='${HA_SQLITE_DB_PATH}'"
 				error=true
@@ -57,6 +65,10 @@ function ha::running() {
 			)"
 			[[ -n "${id}" ]] && return 0
 			return 1
+			;;
+		haos)
+			status="$(ha core stats)"
+			return $?
 	esac
 }
 
@@ -65,6 +77,9 @@ function ha::stop() {
 		docker-compose)
 			docker compose --project-directory "${HA_DOCKER_COMPOSE_PROJECT_PATH}" down "${HA_DOCKER_COMPOSE_SERVICE}"
 			;;
+		haos)
+			ha core stop
+			;;
 	esac
 }
 
@@ -72,6 +87,9 @@ function ha::start() {
 	case "${HA_INSTALLATION_METHOD}" in
 		docker-compose)
 			docker compose --project-directory "${HA_DOCKER_COMPOSE_PROJECT_PATH}" up -d "${HA_DOCKER_COMPOSE_SERVICE}"
+			;;
+		haos)
+			ha core start
 			;;
 	esac
 }
@@ -93,6 +111,12 @@ function db::config_check() {
 				error=true
 			fi
 			;;
+		native)
+			if ! [[ $DB_HOST && ${DB_HOST-x} ]];then
+				echo "DB_HOST is not specified"
+				error=true
+			fi
+			;;
 		*)
 			echo "Unknown installation method. Can only be one of: docker, docker-compose, native, custom"
 			error=true
@@ -110,8 +134,10 @@ function db::execute() {
 				exec --no-TTY "${DB_DOCKER_COMPOSE_SERVICE}" \
 				"${DB_DOCKER_COMPOSE_BINARY}" \
 				--default-character-set utf8mb4 \
-				--user="${DB_USER}" --password="${DB_PASSWORD}" "${DB_NAME}" \
-				< "${MYSQL_IMPORT_FOLDER}/schema.sql"
+				--user="${DB_USER}" --password="${DB_PASSWORD}" "${DB_NAME}"
+			;;
+		native)
+			mariadb -h "${DB_HOST}" --user="${DB_USER}" --password="${DB_PASSWORD}" "${DB_NAME}"
 			;;
 		*)
 			;;
@@ -396,8 +422,8 @@ if [[ -f "${SQLITE_EXPORT_FOLDER}"/.done ]]; then
 		for file in "${SQLITE_EXPORT_FOLDER}/data_"*.sql; do
 			source="$(realpath "${file}")"
 			destination="${MYSQL_IMPORT_FOLDER}/$(basename "${source}")"
-			rel_source="$(realpath --relative-to "${MYSQL_IMPORT_FOLDER}" "${source}")"
-			rel_destination="$(realpath --relative-to "$(pwd)" "${destination}")"
+			rel_source="$(realpath "${MYSQL_IMPORT_FOLDER}" "${source}")"
+			rel_destination="$(realpath "$(pwd)" "${destination}")"
 			if ln -sf "${rel_source}" "${destination}"; then
 				echo "   - ${rel_destination} -> ${rel_source}"
 			fi
@@ -503,8 +529,18 @@ fi
 
 echo -n "Login to MySQL? [y/N] "
 if yesNo; then
-	docker compose \
-		--project-directory "${PROJECT_DIR}" \
-		exec db \
-		/usr/bin/mariadb --default-character-set utf8mb4 --user="${MYSQL_USER}" --password="${MYSQL_PASSWORD}" "${MYSQL_DB}"
+	case "${DB_INSTALLATION_METHOD}" in
+		docker-compose)
+			docker compose \
+				--project-directory "${PROJECT_DIR}" \
+				exec db \
+				/usr/bin/mariadb --default-character-set utf8mb4 --user="${DB_USER}" --password="${DB_PASSWORD}" "${DB_NAME}"
+			;;
+		native)
+			mariadb --default-character-set utf8mb4 --user="${DB_USER}" --password="${DB_PASSWORD}" "${DB_NAME}"
+			;;
+		*)
+			;;
+	esac
+
 fi
