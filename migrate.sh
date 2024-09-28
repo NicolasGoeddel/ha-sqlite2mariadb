@@ -537,7 +537,7 @@ if yesNo; then
 				/usr/bin/mariadb --default-character-set utf8mb4 --user="${DB_USER}" --password="${DB_PASSWORD}" "${DB_NAME}"
 			;;
 		native)
-			mariadb --default-character-set utf8mb4 --user="${DB_USER}" --password="${DB_PASSWORD}" "${DB_NAME}"
+			mariadb --default-character-set utf8mb4 -h "${DB_HOST}" --user="${DB_USER}" --password="${DB_PASSWORD}" "${DB_NAME}"
 			;;
 		*)
 			;;
