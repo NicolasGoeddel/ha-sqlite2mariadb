@@ -22,6 +22,18 @@ case "${HA_INSTALLATION_METHOD}" in
 		;;
 esac
 
+function realative_path() {
+	local base_dir="$1"
+    local abs_path="$2"
+
+	if [ -L `which realpath` ]; then 
+		# We are most likely on a busybox system (seems like realpath is a symlink)
+		realpath "${base_dir}" "${abs_path}"
+	else
+        realpath --canonicalize-missing --relative-to="${base_dir}" "${abs_path}"
+	fi
+}
+
 function ha::config_check() {
 	local error=false
 	case "${HA_INSTALLATION_METHOD}" in
@@ -420,10 +432,10 @@ if [[ -f "${SQLITE_EXPORT_FOLDER}"/.done ]]; then
 		echo "done."
 		echo " * Symbolic link data"
 		for file in "${SQLITE_EXPORT_FOLDER}/data_"*.sql; do
-			source="$(realpath "${file}")"
+			source="$(relative_path "${file}")"
 			destination="${MYSQL_IMPORT_FOLDER}/$(basename "${source}")"
-			rel_source="$(realpath "${MYSQL_IMPORT_FOLDER}" "${source}")"
-			rel_destination="$(realpath "$(pwd)" "${destination}")"
+			rel_source="$(relative_path "${MYSQL_IMPORT_FOLDER}" "${source}")"
+			rel_destination="$(relative_path "$(pwd)" "${destination}")"
 			if ln -sf "${rel_source}" "${destination}"; then
 				echo "   - ${rel_destination} -> ${rel_source}"
 			fi
@@ -480,7 +492,7 @@ BEGIN
     DECLARE cur CURSOR FOR
         SELECT table_name, column_name, column_type, extra, data_type
         FROM information_schema.columns
-        WHERE column_key = 'PRI' AND table_schema = 'homeassistant';
+        WHERE column_key = 'PRI' AND table_schema = '$DB_NAME';
 
     -- Handle the end of the cursor
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
