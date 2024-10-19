@@ -67,7 +67,7 @@ function ha::running() {
 			return 1
 			;;
 		haos)
-			status="$(ha core stats)"
+			ha core stats > /dev/null
 			return $?
 	esac
 }
@@ -137,7 +137,7 @@ function db::execute() {
 				--user="${DB_USER}" --password="${DB_PASSWORD}" "${DB_NAME}"
 			;;
 		native)
-			mariadb -h "${DB_HOST}" --user="${DB_USER}" --password="${DB_PASSWORD}" "${DB_NAME}"
+			mariadb -h "${DB_HOST}" --user="${DB_USER}" --password="${DB_PASSWORD}" --default-character-set=utf8mb4 "${DB_NAME}"
 			;;
 		*)
 			;;
@@ -480,7 +480,7 @@ BEGIN
     DECLARE cur CURSOR FOR
         SELECT table_name, column_name, column_type, extra, data_type
         FROM information_schema.columns
-        WHERE column_key = 'PRI';
+        WHERE column_key = 'PRI' AND table_schema = 'homeassistant';
 
     -- Handle the end of the cursor
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
