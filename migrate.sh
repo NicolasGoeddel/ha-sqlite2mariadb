@@ -22,7 +22,7 @@ case "${HA_INSTALLATION_METHOD}" in
 		;;
 esac
 
-function realative_path() {
+function relative_path() {
 	local base_dir="$1"
     local abs_path="$2"
 
