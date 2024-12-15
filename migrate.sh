@@ -23,14 +23,14 @@ case "${HA_INSTALLATION_METHOD}" in
 esac
 
 function relative_path() {
-	local base_dir="$1"
-    local abs_path="$2"
+	local relative_to="${2-}"
+    local file="$1"
 
-	if [ -L `which realpath` ]; then 
-		# We are most likely on a busybox system (seems like realpath is a symlink)
-		realpath "${base_dir}" "${abs_path}"
+	if [ -L `which realpath` ] || [ -z "$relative_to" ]; then 
+		# We are most likely on a busybox system (seems like realpath is a symlink) or we do not have a --relative-to prop
+		realpath "${file}"
 	else
-        realpath --canonicalize-missing --relative-to="${base_dir}" "${abs_path}"
+        realpath --canonicalize-missing --relative-to="${relative_to}" "${file}"
 	fi
 }
 
@@ -434,8 +434,8 @@ if [[ -f "${SQLITE_EXPORT_FOLDER}"/.done ]]; then
 		for file in "${SQLITE_EXPORT_FOLDER}/data_"*.sql; do
 			source="$(relative_path "${file}")"
 			destination="${MYSQL_IMPORT_FOLDER}/$(basename "${source}")"
-			rel_source="$(relative_path "${MYSQL_IMPORT_FOLDER}" "${source}")"
-			rel_destination="$(relative_path "$(pwd)" "${destination}")"
+			rel_source="$(relative_path "${source}" "${MYSQL_IMPORT_FOLDER}")"
+			rel_destination="$(relative_path "${destination}" "$(pwd)")"
 			if ln -sf "${rel_source}" "${destination}"; then
 				echo "   - ${rel_destination} -> ${rel_source}"
 			fi
