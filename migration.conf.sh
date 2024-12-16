@@ -35,6 +35,8 @@ DB_DOCKER_COMPOSE_SERVICE="db"
 ## The path to the binary of your DB instance, it's usually one of /usr/bin/mariadb or /usr/bin/mysql
 DB_DOCKER_COMPOSE_BINARY=/usr/bin/mariadb
 
+## The host to connect to (using native DB_INSTALLATION_METHOD)
+DB_HOST=core-mariadb
 ## The user of your HA database
 DB_USER=homeassistant
 

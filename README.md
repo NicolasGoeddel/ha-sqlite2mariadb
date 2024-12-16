@@ -6,8 +6,15 @@ I personally started this project because my SQLite database was just too slow a
 
 Then I search for other people trying to do the same and found some really good tutorials and step by step guides, but none of them were able to do it fully automatic. So I decided to write this Bash script.
 
+## Pre-requisites
+Before starting, a database on your mariadb server needs to be created with the following details
+
+`create database homeassistant character set utf8mb4 collate utf8mb4_unicode_ci;`
+
+
 ## How?
 
+### step by step 
 Here is a step by step explanation of what the script does. Each of the steps can be skipped or executed by choosing between yes and no.
 
 ### Step 1 - Stop HA
